@@ -67,7 +67,7 @@ func main() {
 		return
 	}
 
-	// 初始化gin框架的校验器使用的翻译器
+	// 初始化gin框架的校验器使用的语言处理器
 	if err := controller.InitTrans("zh"); err != nil {
 		zap.L().Error("init validator failed, err:%v\n", zap.Error(err))
 		return

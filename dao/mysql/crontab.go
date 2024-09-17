@@ -2,6 +2,8 @@ package mysql
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"go-web-app/models"
@@ -9,6 +11,7 @@ import (
 	"go-web-app/pkg/todaytime"
 	"go-web-app/settings"
 	clientv3 "go.etcd.io/etcd/client/v3"
+	"io/ioutil"
 	"strconv"
 	"time"
 )
@@ -33,20 +36,52 @@ type JobMgr struct {
 }
 
 func InitCrontab(cfg *settings.EtcdConfig) (err error) {
+	// 加载 CA 证书
+	caCert, err := ioutil.ReadFile(cfg.CaCert)
+	if err != nil {
+		fmt.Println("加载 CA 证书失败：", err)
+		return
+	}
+	caCertPool := x509.NewCertPool()
+	if !caCertPool.AppendCertsFromPEM(caCert) {
+		fmt.Println("解析 CA 证书失败")
+		return
+	}
+
+	// 加载客户端证书和私钥
+	cert, err := tls.LoadX509KeyPair(cfg.CertFile, cfg.KeyFile)
+	if err != nil {
+		fmt.Println("加载客户端证书和私钥失败：", err)
+		return
+	}
+
+	// 创建 TLS 配置
+	tlsConfig := &tls.Config{
+		RootCAs:      caCertPool,              // 信任的 CA
+		Certificates: []tls.Certificate{cert}, // 客户端证书
+		ServerName:   cfg.ServerName,          // etcd 服务器的域名
+	}
+
+	// 配置 etcd 客户端
 	config := clientv3.Config{
 		Endpoints:   cfg.Endpoints,
 		DialTimeout: time.Duration(cfg.DialTimeout) * time.Millisecond,
+		TLS:         tlsConfig,
 		Username:    cfg.Username,
 		Password:    cfg.Password,
 	}
+
+	// 创建 etcd 客户端
 	if clinet, err = clientv3.New(config); err != nil {
-		fmt.Println(err)
+		fmt.Println("连接 etcd 失败：", err)
 		return
 	}
-	//获取KV和Lease的API子集
+
+	// 获取 KV 和 Lease 的 API 子集
 	kv = clientv3.NewKV(clinet)
 	lease = clientv3.NewLease(clinet)
-	//赋值单例
+
+	// 赋值单例
 	GJobmgr = &models.JobMgr{
 		Clinet: clinet,
 		Kv:     kv,
@@ -55,6 +90,7 @@ func InitCrontab(cfg *settings.EtcdConfig) (err error) {
 
 	return
 }
+
 func SaveJob(jobmgr *models.JobMgr, job models.CrontabJob) (oldJob *models.Job, err error) {
 
 	var (

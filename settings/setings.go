@@ -54,10 +54,16 @@ type RedisConfig struct {
 }
 
 type EtcdConfig struct {
-	Endpoints   []string `mapstructure:"host"`
-	DialTimeout int64    `mapstructure:"dialtiemeout"`
-	Username    string   `mapstructure:"username"`
-	Password    string   `mapstructure:"password"`
+	Endpoints   []string
+	DialTimeout int
+	// 如果需要用户名和密码
+	Username string
+	Password string
+	// 新增 TLS 相关配置
+	CaCert     string
+	CertFile   string
+	KeyFile    string
+	ServerName string
 }
 
 func Init(configfile string) (err error) {

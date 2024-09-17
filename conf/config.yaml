@@ -28,10 +28,15 @@ redis:
     dbname: 6
     pool_size: 100
 etcd:
-  host: ["127.0.0.1:8084"]
-  username: "root"
-  password: "sinfotek"
-  dialtiemeout: 3000
+  endpoints:
+    - "https://etcd.pawstickchief.com:2379"
+  dial_timeout: 5000  # 超时时间，单位为毫秒
+  ca_cert: "conf\ssl\etcd\ca.pem"
+  cert_file: "conf\ssl\etcd\client.pem"
+  key_file: "conf\ssl\etcd\client-key.pem"
+  server_name: "etcd.pawstickchief.com"
+  username: "addmin"
+  password: "Mark1590"
 file:
   filemaxsize: 2048
   savedir: "./static/upload/"
